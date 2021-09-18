@@ -1,9 +1,10 @@
 -- -- uno
 -- -- baby steps
-
 engine.name = "PolyPerc"
 
 local midi_in_device
+local last_pan = 1
+local PAN = 0.62
 
 local function mtof(m)
   return (2 ^ ((m - 69) / 12)) * 440
@@ -17,7 +18,9 @@ local function midi_event(data)
         -- ensure CC parameter reads happen before a note is fired
         clock.sleep(0.003)
         engine.amp(d.vel / 127)
+        engine.pan(math.random() * last_pan) 
         engine.hz(mtof(d.note))
+        if last_pan == 1 then last_pan = -1 else last_pan = 1 end
       end
     )
   end
@@ -56,7 +59,7 @@ function init()
 
   params:add_separator("uno: synth params")
 
-  params:add_control("release", "Release", controlspec.new(0.1, 10, "lin", 0, 0.4, "s"))
+  params:add_control("release", "Amp Env Release", controlspec.new(0.1, 10, "lin", 0, 0.4, "s"))
   params:set_action(
     "release", 
     function(x)
@@ -82,6 +85,87 @@ function init()
       redraw()
     end
   )
+
+  local float = function(default_value) 
+    controlspec.new(0, 1, "lin", 0, default_value) 
+  end
+
+  -- hmmm...this isn't _really_ the delay level
+  params:add_control("delay_level", "Delay Level", controlspec.new(0, 1, "lin", 0, 1))
+  params:set_action(
+    "delay_level",
+    function(x)
+      softcut.level(1, x)
+      softcut.level(2, x)
+    end
+  )
+
+  params:add_control("delay_feedback", "Delay Feedback", controlspec.new(0, 1, "lin", 0, 0.5))
+  params:set_action(
+    "delay_feedback",
+    function(x)
+      softcut.pre_level(1, x)
+      softcut.pre_level(2, x)
+    end
+  )
+
+  params:add_control("delay_rate", "Delay Rate", controlspec.new(-1, 10, "lin", 0, 1.4))
+  params:set_action(
+    "delay_rate",
+    function(x)
+      softcut.rate(1, x)
+      softcut.rate(2, x)
+    end
+  )
+
+  -- configure the delay
+  audio.level_cut(1)
+  audio.level_adc_cut(1)
+  audio.level_eng_cut(1)
+  softcut.level(1, params:get("delay_level"))
+  softcut.level(2, params:get("delay_level"))
+  softcut.level_slew_time(1, 0.25)
+  softcut.level_slew_time(2, 0.25)
+  softcut.level_input_cut(1, 1, 1)
+  softcut.level_input_cut(2, 2, 1)
+  softcut.pre_level(1, params:get("delay_feedback"))
+  softcut.pre_level(2, params:get("delay_feedback"))
+  softcut.pan(1, 0.54)
+  softcut.pan(2, -0.54)
+  softcut.play(1, 1)
+  softcut.play(2, 1)
+  softcut.rate(1, params:get("delay_rate"))
+  softcut.rate(2, params:get("delay_rate"))
+  softcut.rate_slew_time(1, 0)
+  softcut.rate_slew_time(2, 0)
+  softcut.loop_start(1, 0)
+  softcut.loop_start(2, 0)
+  softcut.loop_end(1, 0.5)
+  softcut.loop_end(2, 0.5)
+  softcut.loop(1, 1)
+  softcut.loop(2, 1)
+  softcut.fade_time(1, 0.1)
+  softcut.fade_time(2, 0.1)
+  softcut.rec(1, 1)
+  softcut.rec(2, 1)
+  softcut.rec_level(1, 1)
+  softcut.rec_level(2, 1)
+  softcut.position(1, 0)
+  softcut.position(2, 0)
+  softcut.enable(1, 1)
+  softcut.enable(2, 1)
+  softcut.filter_dry(1, 0)
+  softcut.filter_dry(1, 0)
+  softcut.filter_lp(1, 1.0)
+  softcut.filter_lp(2, 1.0)
+  softcut.filter_bp(1, 1.0)
+  softcut.filter_bp(2, 1.0)
+  softcut.filter_hp(1, 1.0)
+  softcut.filter_hp(2, 1.0)
+  softcut.filter_fc(1, 300)
+  softcut.filter_fc(2, 300)
+  softcut.filter_rq(1, 2.0)
+  softcut.filter_rq(2, 2.0)
 
   engine.amp(1)
   enc(1, 0)
